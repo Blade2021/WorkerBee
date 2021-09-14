@@ -58,6 +58,8 @@ public class WorkerBeeApplication {
 			e.printStackTrace();
 		}
 
+		// Event Manager
+
 		EventManager eventManager = new EventManager();
 
 		OAuth2IdentityProvider provider = new TwitchIdentityProvider("clientid","secret","redirectURL");
