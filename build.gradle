@@ -1,0 +1,51 @@
+plugins {
+    id 'org.springframework.boot' version '2.5.4'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id 'java'
+    id'com.github.johnrengelman.shadow' version '4.0.4'
+    id 'application'
+}
+
+group = 'com.github.blade2021'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+    google()
+    maven {
+        name 'm2-dv8tion'
+        url 'https://m2.dv8tion.net/releases'
+    }
+}
+
+dependencies {
+
+    //Twitch Integrations
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jsr310
+    implementation group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: '2.12.5'
+    implementation group: 'com.github.twitch4j', name: 'twitch4j', version: '1.5.0'
+
+    //Spring Integrations
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa:2.5.4'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client:2.5.4'
+    implementation 'org.springframework.boot:spring-boot-starter-web:2.5.4'
+    compileOnly 'org.projectlombok:lombok:1.18.20'
+    annotationProcessor 'org.projectlombok:lombok:1.18.20'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test:2.5.4'
+
+    //Discord
+    implementation 'net.dv8tion:JDA:4.3.0_277' // Discord Lib
+    implementation 'io.github.cdimascio:java-dotenv:5.2.2'  // Config loader
+    implementation group: 'net.sf.trove4j', name: 'trove4j', version: '3.0.3'
+}
+
+test {
+    useJUnitPlatform()
+}
