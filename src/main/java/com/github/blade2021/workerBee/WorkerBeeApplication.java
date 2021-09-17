@@ -1,8 +1,10 @@
 package com.github.blade2021.workerBee;
 
+import com.github.blade2021.workerBee.events.EventHandler;
 import com.github.blade2021.workerBee.events.GoLive;
 import com.github.blade2021.workerBee.objects.Dispatcher;
-import com.github.blade2021.workerBee.service.UserObjectService;
+import com.github.philippheuer.credentialmanager.CredentialManager;
+import com.github.philippheuer.credentialmanager.CredentialManagerBuilder;
 import com.github.philippheuer.credentialmanager.domain.OAuth2Credential;
 import com.github.philippheuer.credentialmanager.identityprovider.OAuth2IdentityProvider;
 import com.github.philippheuer.events4j.core.EventManager;
@@ -10,14 +12,7 @@ import com.github.philippheuer.events4j.simple.SimpleEventHandler;
 import com.github.twitch4j.TwitchClient;
 import com.github.twitch4j.TwitchClientBuilder;
 import com.github.twitch4j.auth.providers.TwitchIdentityProvider;
-import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.JDABuilder;
-import net.dv8tion.jda.api.requests.GatewayIntent;
-import net.dv8tion.jda.api.utils.ChunkingFilter;
-import net.dv8tion.jda.api.utils.MemberCachePolicy;
-import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import net.dv8tion.jda.internal.JDAImpl;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -25,10 +20,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestTemplate;
 
 import javax.security.auth.login.LoginException;
-import java.util.Optional;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @SpringBootApplication
 public class WorkerBeeApplication {
@@ -36,11 +31,12 @@ public class WorkerBeeApplication {
 	public static String prefix = Config.get("prefix");
 	public static JDAImpl jda = null;
 	public static Dispatcher dispatcher;
-	public static UserObjectService userObjectService;
 	public static TwitchClient twitchClient = null;
 	public static EventManager eventManager = new EventManager();
 
-	public static OAuth2IdentityProvider provider = null;
+	public static List<OAuth2Credential> credentialList = new ArrayList<>();
+	public static CredentialManager credentialManager = CredentialManagerBuilder.builder().build();
+	public static Map<String, String> credMap = new HashMap<>();
 
 	public static void main(String[] args) throws LoginException {
 		SpringApplication.run(WorkerBeeApplication.class, args);
@@ -69,12 +65,22 @@ public class WorkerBeeApplication {
 
  */
 
-		provider = new TwitchIdentityProvider(Config.get("TWITCHCLIENT-ID"), Config.get("TWITCHCLIENT-SECRET"),"http://localhost");
+		credentialManager.registerIdentityProvider(new TwitchIdentityProvider(Config.get("TWITCHCLIENT-ID"), Config.get("TWITCHCLIENT-SECRET"),"http://localhost"));
+
+
+		OAuth2Credential defaultToken = null;
+		if(credentialManager.getOAuth2CredentialByUserId(credMap.get("313832264792539142")).isPresent()){
+			defaultToken = credentialManager.getOAuth2CredentialByUserId(credMap.get("313832264792539142")).get();
+		}
+
+		eventManager.autoDiscovery();
+		eventManager.setDefaultEventHandler(EventHandler.class);
 
 		twitchClient = TwitchClientBuilder.builder()
-				.withDefaultAuthToken(credential)
+				.withDefaultAuthToken(defaultToken)
 				.withEnableHelix(true)
 				.withEventManager(eventManager)
+				.withDefaultEventHandler(EventHandler.class)
 				.build();
 
 		twitchClient.getEventManager().getEventHandler(SimpleEventHandler.class).registerListener(new GoLive());
@@ -83,30 +89,6 @@ public class WorkerBeeApplication {
 	@Bean
 	public RestTemplate restTemplate(RestTemplateBuilder builder){
 		return builder.build();
-	}
-
-
-	@Bean
-	CommandLineRunner run(UserObjectService userObjectService){
-
-		WorkerBeeApplication.userObjectService = userObjectService;
-
-		return args -> {
-
-			String accessToken = userObjectService.getUserObject("313832264792539142").getTwitchAccessToken();
-			String refreshToken = userObjectService.getUserObject("313832264792539142").getTwitchRefreshToken();
-
-			Optional<OAuth2Credential> refreshed = provider.refreshCredential(credential);
-
-			twitchClient = TwitchClientBuilder.builder()
-					.withDefaultAuthToken()
-					.withEnableHelix(true)
-					.withEventManager(eventManager)
-					.build();
-
-			twitchClient.getEventManager().getEventHandler(SimpleEventHandler.class).registerListener(new GoLive());
-		};
-
 	}
 
 }

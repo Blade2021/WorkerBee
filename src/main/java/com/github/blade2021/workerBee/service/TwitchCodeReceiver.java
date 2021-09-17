@@ -1,14 +1,16 @@
 package com.github.blade2021.workerBee.service;
 
 import com.github.blade2021.workerBee.Config;
-import com.github.blade2021.workerBee.domain.UserObject;
+import com.github.philippheuer.credentialmanager.domain.Credential;
+import com.github.philippheuer.credentialmanager.domain.IdentityProvider;
 import com.github.philippheuer.credentialmanager.domain.OAuth2Credential;
 import com.github.philippheuer.credentialmanager.identityprovider.OAuth2IdentityProvider;
 import com.github.twitch4j.auth.providers.TwitchIdentityProvider;
 import org.springframework.web.bind.annotation.*;
 
-import java.sql.Timestamp;
-import java.util.Date;
+import java.util.Optional;
+
+import static com.github.blade2021.workerBee.WorkerBeeApplication.*;
 
 @RestController
 
@@ -20,15 +22,31 @@ public class TwitchCodeReceiver {
         System.out.printf("Code: %s\n",code);
         System.out.printf("Scopes: %s\n",scope);
 
-        OAuth2IdentityProvider provider = new TwitchIdentityProvider(Config.get("TWITCHCLIENT-ID"), Config.get("TWITCHCLIENT-SECRET"),"http://localhost");
-		OAuth2Credential credential = provider.getCredentialByCode(code);
+        //provider = new TwitchIdentityProvider(Config.get("TWITCHCLIENT-ID"), Config.get("TWITCHCLIENT-SECRET"),"http://localhost");
 
-        Date now = new Date();
-        Timestamp timestamp = Timestamp.from(now.toInstant().plusSeconds(credential.getExpiresIn()));
+        Optional<OAuth2IdentityProvider> provider = credentialManager.getOAuth2IdentityProviderByName("twitch");
+        if(provider.isPresent()){
 
-        UserObject userObject = new UserObject(Long.parseLong(identifier), credential.getAccessToken(), credential.getRefreshToken(), timestamp, scope);
+            OAuth2Credential credential = provider.get().getCredentialByCode(code);
 
-        System.out.printf("Access Token: %s\nRefresh Token: %s",credential.getAccessToken(),credential.getRefreshToken());
+            String userid = credential.getUserId();
+
+            if(credMap.containsKey(identifier)){
+                credMap.replace(identifier,userid);
+            } else {
+                credMap.put(identifier,userid);
+            }
+
+            credentialManager.addCredential("twitch",credential);
+            credentialManager.save();
+
+            credentialManager.getCredentials().forEach(item -> {
+                System.out.println(item.getUserId());
+            });
+
+            System.out.printf("Access Token: %s\nRefresh Token: %s",credential.getAccessToken(),credential.getRefreshToken());
+        }
+
 
     }
 
